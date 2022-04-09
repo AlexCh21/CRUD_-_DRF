@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Stock, StockProduct
+from logistic.models import Product, Stock, StockProduct
 from rest_framework.exceptions import ValidationError
 
 
@@ -7,7 +7,7 @@ class ProductSerializer(serializers.ModelSerializer):
     # настройте сериализатор для продукта
     class Meta:
         model = Product
-        fields = ["id", "title", "description"]
+        fields = ['id','title', 'description']
 
         def validate_text(self, value):
             if 'product' in value:
@@ -19,7 +19,7 @@ class ProductPositionSerializer(serializers.ModelSerializer):
     # настройте сериализатор для позиции продукта на складе
     class Meta:
         model = StockProduct
-        fields = ['product', 'quantity', 'price']
+        fields = ['id','product', 'quantity', 'price']
 
 
 class StockSerializer(serializers.ModelSerializer):
@@ -36,14 +36,13 @@ class StockSerializer(serializers.ModelSerializer):
 
         # создаем склад по его параметрам
         stock = super().create(validated_data)
-
         # здесь вам надо заполнить связанные таблицы
         # в нашем случае: таблицу StockProduct
         # с помощью списка positions
 
         for position in positions:
-            StockProduct.objects.create(stock=stock, **position)
-
+            store = StockProduct.objects.create(stock=stock, **position)
+            store.save()
         return stock
 
     def update(self, instance, validated_data):
@@ -58,10 +57,17 @@ class StockSerializer(serializers.ModelSerializer):
         # с помощью списка positions
 
         for position in positions:
-            obj, created = StockProduct.objects.update_or_create(
+            store = StockProduct.objects.update_or_create(
                 stock=stock,
                 product=position['product'],
-                defaults={'stock': stock, 'product': position['product'], 'quantity': position['quantity'], 'price': position['price']}
+                defaults={
+                    'stock': stock,
+                    'product': position['product'],
+                    'quantity': position['quantity'],
+                    'price': position['price']
+                    }
             )
+            store.save()
 
         return stock
+
